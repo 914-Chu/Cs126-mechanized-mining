@@ -37,8 +37,6 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private final int DOWN_TILE = 1;
     private final int LEFT_TILE = 2;
     private final int RIGHT_TILE = 3;
-    private final List<Integer> ADJACENT_TILE_INDEX= new ArrayList(Arrays.asList(UP_TILE,DOWN_TILE,LEFT_TILE,RIGHT_TILE));
-
 
     /**
      * Called at the start of every round
@@ -91,11 +89,13 @@ public class PlayerStrategy implements MinePlayerStrategy {
         Point otherPlayerLocation = boardView.getOtherPlayerLocation();
         List<Point> adjacentPointList = getAdjacentPoints(selfLocation);
         List<TileType> adjacentTileTypeList = getAdjacentTileTypes(boardView, selfLocation);
-        List<>
-        Map<InventoryItem, Point> itemsOnGround = boardView.getItemsOnGround();
         TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
         TurnAction action = null;
-
+        Map<InventoryItem, Point> itemsOnGround = boardView.getItemsOnGround();
+        Map<Point, TileType> adjacentTiles = new HashMap<>();
+        for(int i = 0; i < ADJACENT_TILES_AMOUNT; i++) {
+            adjacentTiles.put(adjacentPointList.get(i), adjacentTileTypeList.get(i));
+        }
 
         if(inventoryItemList.size() == maxInventorySize){
             if(!goingToMarket){
@@ -109,8 +109,11 @@ public class PlayerStrategy implements MinePlayerStrategy {
         }else if(canMine(selfTileType)){
             action = TurnAction.MINE;
         }else {
-             = getAvaliableAdjacentTile(adjacentPointList, otherPlayerLocation);
-            action = examineAdjacentTile(adjacentTileTypeList, otherLocation);
+             Point unavailableAdjacentTilePoint = getUnavailableAdjacentTile(adjacentTiles, otherPlayerLocation);
+             if(unavailableAdjacentTilePoint != null) {
+                 adjacentTiles.remove(unavailableAdjacentTilePoint);
+             }
+            action = examineAdjacentTile(adjacentTiles, itemsOnGround);
         }
 
 
@@ -247,15 +250,14 @@ public class PlayerStrategy implements MinePlayerStrategy {
         return Arrays.asList(TileType.RESOURCE_DIAMOND, TileType.RESOURCE_EMERALD, TileType.RESOURCE_RUBY).contains(tileType);
     }
 
-    public int checkOtherPlayerLocation(List<Point> adjacentPointList, Point otherPlayerLocation) {
-        for(Point point : adjacentPointList) {
-            if(point.equals(otherPlayerLocation)){
-
-            }
+    public Point getUnavailableAdjacentTile(Map<Point, TileType> adjacentTiles, Point otherPlayerLocation) {
+        if(adjacentTiles.containsValue(otherPlayerLocation)){
+            return otherPlayerLocation;
         }
+        return null;
     }
 
-    public TurnAction examineAdjacentTile(List<TileType> adjacentTileTypeList, Point otherPlayerLocation){
+    public TurnAction examineAdjacentTile(Map<Point, TileType> adjacentTiles, Map<InventoryItem, Point> itemsOnGround){
 
 
     }

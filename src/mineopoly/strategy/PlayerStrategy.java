@@ -8,6 +8,7 @@ import mineopoly.tiles.TileType;
 
 import java.awt.*;
 import java.awt.image.AffineTransformOp;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -16,14 +17,23 @@ import java.util.Random;
 public class PlayerStrategy implements MinePlayerStrategy {
 
     private int boardSize;
+    private int halfBoardSize;
     private int maxInventorySize;
     private int winningScore;
     private Point startTileLocation;
+    private Point redLowerMarketPoint;
+    private Point redUpperMarketPoint;
+    private Point blueLowerMarketPoint;
+    private Point blueUpperMarketPoint;
     private boolean isRedPlayer;
+    private boolean goingToMarket;
     private Random random;
     private List<TurnAction> allPossibleActions;
     private List<InventoryItem> inventoryItemList;
+    private List<TurnAction> pathToMarket;
     private final int ADJACENT_TILES_AMOUNT = 4;
+    private final int NEXT_MOVE_TO_MARKET = 0;
+
 
     /**
      * Called at the start of every round
@@ -48,11 +58,12 @@ public class PlayerStrategy implements MinePlayerStrategy {
         this.allPossibleActions = new ArrayList<>(EnumSet.allOf(TurnAction.class));
         allPossibleActions.add(null);
         inventoryItemList = new ArrayList<>(maxInventorySize);
-        int halfBoardSize = boardSize / 2;
-        Point redLowerMarketPoint = new Point(halfBoardSize - 1, halfBoardSize - 1);
-        Point redUpperMarketPoint = new Point(halfBoardSize, halfBoardSize);
-        Point blueLowerMarketPoint = new Point(halfBoardSize, halfBoardSize - 1);
-        Point blueUpperMarketPoint = new Point(halfBoardSize - 1, halfBoardSize);
+        goingToMarket = false;
+        halfBoardSize = boardSize / 2;
+        redLowerMarketPoint = new Point(halfBoardSize - 1, halfBoardSize - 1);
+        redUpperMarketPoint = new Point(halfBoardSize, halfBoardSize);
+        blueLowerMarketPoint = new Point(halfBoardSize, halfBoardSize - 1);
+        blueUpperMarketPoint = new Point(halfBoardSize - 1, halfBoardSize);
     }
 
     /**
@@ -71,12 +82,18 @@ public class PlayerStrategy implements MinePlayerStrategy {
 
         Point selfLocation = boardView.getYourLocation();
         Point otherLocation = boardView.getOtherPlayerLocation();
+        Point market;
         List<TileType> adjacentTileTypeList = getAdjacentTileTypes(boardView, selfLocation);
         TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
         TurnAction action;
 
-        if(inventoryItemList.size() == maxInventorySize){
-            action = path
+        if(goingToMarket) {
+            action = pathToMarket.get(NEXT_MOVE_TO_MARKET);
+            pathToMarket.remove(NEXT_MOVE_TO_MARKET);
+        }else if(inventoryItemList.size() == maxInventorySize){
+            market = findClosestMarket(selfLocation);
+            pathToMarket = getPathToMarket(selfLocation);
+
         }
 
 
@@ -151,9 +168,49 @@ public class PlayerStrategy implements MinePlayerStrategy {
         return adjacentPointList;
     }
 
-    public List<TurnAction> getPathToMarket() {
+    public List<TurnAction> getPathToMarket(Point location) {
 
+        List<TurnAction> pathToMarket = new ArrayList<>();
+        Point market = findClosestMarket(location);
+        int horizontalMove = market.x - location.x;
+        int verticalMove = market.y - location.y;
+        if(horizontalMove < 0) {
+            for(int i = 0; i < Math.abs(horizontalMove); i++) {
+                pathToMarket.add(TurnAction.MOVE_LEFT);
+            }
+        }else {
+            for(int i = 0; i < Math.abs(horizontalMove); i++) {
+                pathToMarket.add(TurnAction.MOVE_RIGHT);
+            }
+        }
 
+        if(verticalMove < 0) {
+            for(int i = 0; i < Math.abs(verticalMove); i++) {
+                pathToMarket.add(TurnAction.MOVE_DOWN);
+            }
+        }else {
+            for(int i = 0; i < Math.abs(verticalMove); i++) {
+                pathToMarket.add(TurnAction.MOVE_UP);
+            }
+        }
+        return pathToMarket;
+    }
+
+    public Point findClosestMarket(Point location) {
+
+        if(isRedPlayer) {
+            if(location.x < redUpperMarketPoint.x && location.y < redUpperMarketPoint.y){
+                return redLowerMarketPoint;
+            }else {
+                return redUpperMarketPoint;
+            }
+        }else {
+            if(location.x <= blueUpperMarketPoint.x && location.y >= blueUpperMarketPoint.y){
+                return blueUpperMarketPoint;
+            }else {
+                return blueLowerMarketPoint;
+            }
+        }
     }
 
 

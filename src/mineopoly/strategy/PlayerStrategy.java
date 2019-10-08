@@ -11,6 +11,7 @@ import java.awt.image.AffineTransformOp;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class PlayerStrategy implements MinePlayerStrategy {
 
@@ -31,6 +32,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private List<TurnAction> allPossibleActions;
     private List<InventoryItem> inventoryItemList;
     private List<TurnAction> pathToMarket;
+    private List<TurnAction> movementActions;
     private final int ADJACENT_TILES_AMOUNT = 4;
     private final int NEXT_MOVE_TO_MARKET = 0;
     private final int UP_TILE = 0;
@@ -62,6 +64,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
         allPossibleActions.add(null);
         currentTileLocation = startTileLocation;
         inventoryItemList = new ArrayList<>(maxInventorySize);
+        movementActions = new ArrayList<>(Arrays.asList(TurnAction.MOVE_UP, TurnAction.MOVE_DOWN, TurnAction.MOVE_LEFT, TurnAction.MOVE_RIGHT));
         goingToMarket = false;
         currentScore = 0;
         halfBoardSize = boardSize / 2;
@@ -92,14 +95,16 @@ public class PlayerStrategy implements MinePlayerStrategy {
         TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
         TurnAction action = null;
         Map<InventoryItem, Point> itemsOnGround = boardView.getItemsOnGround();
-        Map<Point, TileType> adjacentTiles = new HashMap<>();
-        for(int i = 0; i < ADJACENT_TILES_AMOUNT; i++) {
-            adjacentTiles.put(adjacentPointList.get(i), adjacentTileTypeList.get(i));
-        }
+        Map<Point, TurnAction> actionAtPoint = new HashMap<>();
+        actionAtPoint.put(adjacentPointList.get(UP_TILE), movementActions.get(UP_TILE));
+        actionAtPoint.put(adjacentPointList.get(DOWN_TILE), movementActions.get(DOWN_TILE));
+        actionAtPoint.put(adjacentPointList.get(LEFT_TILE), movementActions.get(LEFT_TILE));
+        actionAtPoint.put(adjacentPointList.get(RIGHT_TILE), movementActions.get(RIGHT_TILE));
 
         if(inventoryItemList.size() == maxInventorySize){
             if(!goingToMarket){
-                pathToMarket = getPathToMarket(selfLocation);
+                Point closestMarket = findClosestMarket(selfLocation);
+                pathToMarket = getPathToDestination(selfLocation, closestMarket);
                 goingToMarket = true;
             }
             action = pathToMarket.get(NEXT_MOVE_TO_MARKET);
@@ -109,11 +114,12 @@ public class PlayerStrategy implements MinePlayerStrategy {
         }else if(canMine(selfTileType)){
             action = TurnAction.MINE;
         }else {
-             Point unavailableAdjacentTilePoint = getUnavailableAdjacentTile(adjacentTiles, otherPlayerLocation);
-             if(unavailableAdjacentTilePoint != null) {
-                 adjacentTiles.remove(unavailableAdjacentTilePoint);
-             }
-            action = examineAdjacentTile(adjacentTiles, itemsOnGround);
+//             Point unavailableAdjacentTilePoint = getUnavailableAdjacentTile(adjacentPointList, otherPlayerLocation);
+//             if(unavailableAdjacentTilePoint != null) {
+//                 actionAtPoint.remove(unavailableAdjacentTilePoint);
+//             }
+//            Point toGo = examineAdjacentTile(adjacentTiles, itemsOnGround);
+//            action = findAction(toGo, )
         }
 
 
@@ -191,32 +197,31 @@ public class PlayerStrategy implements MinePlayerStrategy {
         return adjacentPointList;
     }
 
-    public List<TurnAction> getPathToMarket(Point location) {
+    public List<TurnAction> getPathToDestination(Point start, Point destination) {
 
-        List<TurnAction> pathToMarket = new ArrayList<>();
-        Point market = findClosestMarket(location);
-        int horizontalMove = market.x - location.x;
-        int verticalMove = market.y - location.y;
+        List<TurnAction> pathToDestination = new ArrayList<>();
+        int horizontalMove = destination.x - start.x;
+        int verticalMove = destination.y - start.y;
         if(horizontalMove < 0) {
             for(int i = 0; i < Math.abs(horizontalMove); i++) {
-                pathToMarket.add(TurnAction.MOVE_LEFT);
+                pathToDestination.add(TurnAction.MOVE_LEFT);
             }
         }else {
             for(int i = 0; i < Math.abs(horizontalMove); i++) {
-                pathToMarket.add(TurnAction.MOVE_RIGHT);
+                pathToDestination.add(TurnAction.MOVE_RIGHT);
             }
         }
 
         if(verticalMove < 0) {
             for(int i = 0; i < Math.abs(verticalMove); i++) {
-                pathToMarket.add(TurnAction.MOVE_DOWN);
+                pathToDestination.add(TurnAction.MOVE_DOWN);
             }
         }else {
             for(int i = 0; i < Math.abs(verticalMove); i++) {
-                pathToMarket.add(TurnAction.MOVE_UP);
+                pathToDestination.add(TurnAction.MOVE_UP);
             }
         }
-        return pathToMarket;
+        return pathToDestination;
     }
 
     public Point findClosestMarket(Point location) {
@@ -250,15 +255,16 @@ public class PlayerStrategy implements MinePlayerStrategy {
         return Arrays.asList(TileType.RESOURCE_DIAMOND, TileType.RESOURCE_EMERALD, TileType.RESOURCE_RUBY).contains(tileType);
     }
 
-    public Point getUnavailableAdjacentTile(Map<Point, TileType> adjacentTiles, Point otherPlayerLocation) {
-        if(adjacentTiles.containsValue(otherPlayerLocation)){
+    public Point getUnavailableAdjacentTile (List<Point> adjacentPointList, Point otherPlayerLocation) {
+        if(adjacentPointList.contains(otherPlayerLocation)){
             return otherPlayerLocation;
         }
         return null;
     }
 
-    public TurnAction examineAdjacentTile(Map<Point, TileType> adjacentTiles, Map<InventoryItem, Point> itemsOnGround){
+//    public Point examineAdjacentTile(Map<Point, TileType> adjacentTiles, Map<InventoryItem, Point> itemsOnGround){
+//
+//
+//    }
 
-
-    }
 }

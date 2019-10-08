@@ -4,6 +4,7 @@ import mineopoly.game.Economy;
 import mineopoly.game.TurnAction;
 import mineopoly.item.InventoryItem;
 import mineopoly.tiles.Tile;
+import mineopoly.tiles.TileType;
 
 import java.awt.*;
 import java.awt.image.AffineTransformOp;
@@ -21,6 +22,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private boolean isRedPlayer;
     private Random random;
     private List<TurnAction> allPossibleActions;
+    private List<InventoryItem> inventoryItemList;
     private final int ADJACENT_TILES_AMOUNT = 4;
 
     /**
@@ -45,6 +47,12 @@ public class PlayerStrategy implements MinePlayerStrategy {
         this.random = random;
         this.allPossibleActions = new ArrayList<>(EnumSet.allOf(TurnAction.class));
         allPossibleActions.add(null);
+        inventoryItemList = new ArrayList<>(maxInventorySize);
+        int halfBoardSize = boardSize / 2;
+        Point redLowerMarketPoint = new Point(halfBoardSize - 1, halfBoardSize - 1);
+        Point redUpperMarketPoint = new Point(halfBoardSize, halfBoardSize);
+        Point blueLowerMarketPoint = new Point(halfBoardSize, halfBoardSize - 1);
+        Point blueUpperMarketPoint = new Point(halfBoardSize - 1, halfBoardSize);
     }
 
     /**
@@ -61,7 +69,17 @@ public class PlayerStrategy implements MinePlayerStrategy {
     @Override
     public TurnAction getTurnAction(PlayerBoardView boardView, Economy economy, boolean isRedTurn) {
 
-        List<Tile> upDownLeftRightTiles = getAdjacentTiles(boardView);
+        Point selfLocation = boardView.getYourLocation();
+        Point otherLocation = boardView.getOtherPlayerLocation();
+        List<TileType> adjacentTileTypeList = getAdjacentTileTypes(boardView, selfLocation);
+        TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
+        TurnAction action;
+
+        if(inventoryItemList.size() == maxInventorySize){
+            action = path
+        }
+
+
         return null;
     }
 
@@ -110,14 +128,31 @@ public class PlayerStrategy implements MinePlayerStrategy {
 
     }
 
-    public List<Tile> getAdjacentTiles(PlayerBoardView boardView) {
+    public List<TileType> getAdjacentTileTypes(PlayerBoardView boardView, Point location) {
 
-        List<Tile> adjacentTiles = new ArrayList<>(ADJACENT_TILES_AMOUNT);
-        Point current = boardView.getYourLocation();
-        adjacentTiles.add(boardView.getTileTypeAtLocation(current.x, current.y));
+        List<TileType> adjacentTilesTypeList = new ArrayList<>(ADJACENT_TILES_AMOUNT);
+        List<Point> adjacentPointList = getAdjacentPoints(location);
+
+        for(int i = 0; i < ADJACENT_TILES_AMOUNT; i++) {
+            adjacentTilesTypeList.add(boardView.getTileTypeAtLocation(adjacentPointList.get(i)));
+        }
+
+        return adjacentTilesTypeList;
+    }
+
+    public List<Point> getAdjacentPoints(Point location) {
+
+        List<Point> adjacentPointList = new ArrayList<>(ADJACENT_TILES_AMOUNT);
+        adjacentPointList.add(new Point(location.x + 1, location.y)); //UP
+        adjacentPointList.add(new Point(location.x - 1, location.y)); //DOWN
+        adjacentPointList.add(new Point(location.x,location.y - 1));  //LEFT
+        adjacentPointList.add(new Point(location.x, location.y + 1)); //RIGHT
+
+        return adjacentPointList;
     }
 
     public List<TurnAction> getPathToMarket() {
+
 
     }
 

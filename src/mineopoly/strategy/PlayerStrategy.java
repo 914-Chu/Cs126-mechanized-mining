@@ -93,6 +93,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
         List<Point> adjacentPointList = getAdjacentPoints(selfLocation);
         List<TileType> adjacentTileTypeList = getAdjacentTileTypes(boardView, selfLocation);
         TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
+        Point unavailableAdjacentTilePoint = getUnavailableAdjacentTile(adjacentPointList, otherPlayerLocation);
         TurnAction action = null;
         Map<InventoryItem, Point> itemsOnGround = boardView.getItemsOnGround();
         Map<Point, TurnAction> actionAtPoint = new HashMap<>();
@@ -114,14 +115,8 @@ public class PlayerStrategy implements MinePlayerStrategy {
         }else if(canMine(selfTileType)){
             action = TurnAction.MINE;
         }else {
-//             Point unavailableAdjacentTilePoint = getUnavailableAdjacentTile(adjacentPointList, otherPlayerLocation);
-//             if(unavailableAdjacentTilePoint != null) {
-//                 actionAtPoint.remove(unavailableAdjacentTilePoint);
-//             }
-//            Point toGo = examineAdjacentTile(adjacentTiles, itemsOnGround);
-//            action = findAction(toGo, )
-        }
 
+        }
 
         return action;
     }
@@ -174,10 +169,10 @@ public class PlayerStrategy implements MinePlayerStrategy {
 
     }
 
-    public List<TileType> getAdjacentTileTypes(PlayerBoardView boardView, Point location) {
+    public List<TileType> getAdjacentTileTypes(PlayerBoardView boardView, Point point) {
 
         List<TileType> adjacentTilesTypeList = new ArrayList<>(ADJACENT_TILES_AMOUNT);
-        List<Point> adjacentPointList = getAdjacentPoints(location);
+        List<Point> adjacentPointList = getAdjacentPoints(point);
 
         for(int i = 0; i < ADJACENT_TILES_AMOUNT; i++) {
             adjacentTilesTypeList.add(boardView.getTileTypeAtLocation(adjacentPointList.get(i)));
@@ -186,13 +181,13 @@ public class PlayerStrategy implements MinePlayerStrategy {
         return adjacentTilesTypeList;
     }
 
-    public List<Point> getAdjacentPoints(Point location) {
+    public List<Point> getAdjacentPoints(Point point) {
 
         List<Point> adjacentPointList = new ArrayList<>(ADJACENT_TILES_AMOUNT);
-        adjacentPointList.add(new Point(location.x + 1, location.y)); //UP
-        adjacentPointList.add(new Point(location.x - 1, location.y)); //DOWN
-        adjacentPointList.add(new Point(location.x,location.y - 1));  //LEFT
-        adjacentPointList.add(new Point(location.x, location.y + 1)); //RIGHT
+        adjacentPointList.add(new Point(point.x + 1, point.y)); //UP
+        adjacentPointList.add(new Point(point.x - 1, point.y)); //DOWN
+        adjacentPointList.add(new Point(point.x,point.y - 1));  //LEFT
+        adjacentPointList.add(new Point(point.x, point.y + 1)); //RIGHT
 
         return adjacentPointList;
     }
@@ -224,16 +219,16 @@ public class PlayerStrategy implements MinePlayerStrategy {
         return pathToDestination;
     }
 
-    public Point findClosestMarket(Point location) {
+    public Point findClosestMarket(Point point) {
 
         if(isRedPlayer) {
-            if(location.x < redUpperMarketPoint.x && location.y < redUpperMarketPoint.y){
+            if(point.x < redUpperMarketPoint.x && point.y < redUpperMarketPoint.y){
                 return redLowerMarketPoint;
             }else {
                 return redUpperMarketPoint;
             }
         }else {
-            if(location.x <= blueUpperMarketPoint.x && location.y >= blueUpperMarketPoint.y){
+            if(point.x <= blueUpperMarketPoint.x && point.y >= blueUpperMarketPoint.y){
                 return blueUpperMarketPoint;
             }else {
                 return blueLowerMarketPoint;
@@ -256,15 +251,31 @@ public class PlayerStrategy implements MinePlayerStrategy {
     }
 
     public Point getUnavailableAdjacentTile (List<Point> adjacentPointList, Point otherPlayerLocation) {
+
         if(adjacentPointList.contains(otherPlayerLocation)){
             return otherPlayerLocation;
         }
         return null;
     }
 
-//    public Point examineAdjacentTile(Map<Point, TileType> adjacentTiles, Map<InventoryItem, Point> itemsOnGround){
-//
-//
-//    }
+    public List<Point> pointsSortByDistance(List<Point> pointList, Point start) {
+
+        Map<Integer, List<Point>> distanceOfPoint = new TreeMap<>();
+        List<Point> sortedPointList = new ArrayList<>();
+
+        for(Point destination : pointList){
+            int length = getPathToDestination(start, destination).size();
+            if(distanceOfPoint.containsKey(length)){
+                distanceOfPoint.get(length).add(destination);
+            }else {
+                distanceOfPoint.put(length, new ArrayList<>(Arrays.asList(destination)));
+            }
+        }
+
+        for(Map.Entry<Integer, List<Point>> entry : distanceOfPoint.entrySet()){
+            sortedPointList.addAll(entry.getValue());
+        }
+        return sortedPointList;
+    }
 
 }

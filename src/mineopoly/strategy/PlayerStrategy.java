@@ -9,10 +9,8 @@ import mineopoly.tiles.TileType;
 import java.awt.*;
 import java.awt.image.AffineTransformOp;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.EnumSet;
+import java.util.*;
 import java.util.List;
-import java.util.Random;
 
 public class PlayerStrategy implements MinePlayerStrategy {
 
@@ -20,7 +18,9 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private int halfBoardSize;
     private int maxInventorySize;
     private int winningScore;
+    private int currentScore;
     private Point startTileLocation;
+    private Point currentTileLocation;
     private Point redLowerMarketPoint;
     private Point redUpperMarketPoint;
     private Point blueLowerMarketPoint;
@@ -33,6 +33,11 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private List<TurnAction> pathToMarket;
     private final int ADJACENT_TILES_AMOUNT = 4;
     private final int NEXT_MOVE_TO_MARKET = 0;
+    private final int UP_TILE = 0;
+    private final int DOWN_TILE = 1;
+    private final int LEFT_TILE = 2;
+    private final int RIGHT_TILE = 3;
+    private final List<Integer> ADJACENT_TILE_INDEX= new ArrayList(Arrays.asList(UP_TILE,DOWN_TILE,LEFT_TILE,RIGHT_TILE));
 
 
     /**
@@ -57,8 +62,10 @@ public class PlayerStrategy implements MinePlayerStrategy {
         this.random = random;
         this.allPossibleActions = new ArrayList<>(EnumSet.allOf(TurnAction.class));
         allPossibleActions.add(null);
+        currentTileLocation = startTileLocation;
         inventoryItemList = new ArrayList<>(maxInventorySize);
         goingToMarket = false;
+        currentScore = 0;
         halfBoardSize = boardSize / 2;
         redLowerMarketPoint = new Point(halfBoardSize - 1, halfBoardSize - 1);
         redUpperMarketPoint = new Point(halfBoardSize, halfBoardSize);
@@ -81,23 +88,33 @@ public class PlayerStrategy implements MinePlayerStrategy {
     public TurnAction getTurnAction(PlayerBoardView boardView, Economy economy, boolean isRedTurn) {
 
         Point selfLocation = boardView.getYourLocation();
-        Point otherLocation = boardView.getOtherPlayerLocation();
-        Point market;
+        Point otherPlayerLocation = boardView.getOtherPlayerLocation();
+        List<Point> adjacentPointList = getAdjacentPoints(selfLocation);
         List<TileType> adjacentTileTypeList = getAdjacentTileTypes(boardView, selfLocation);
+        List<>
+        Map<InventoryItem, Point> itemsOnGround = boardView.getItemsOnGround();
         TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
-        TurnAction action;
+        TurnAction action = null;
 
-        if(goingToMarket) {
+
+        if(inventoryItemList.size() == maxInventorySize){
+            if(!goingToMarket){
+                pathToMarket = getPathToMarket(selfLocation);
+                goingToMarket = true;
+            }
             action = pathToMarket.get(NEXT_MOVE_TO_MARKET);
             pathToMarket.remove(NEXT_MOVE_TO_MARKET);
-        }else if(inventoryItemList.size() == maxInventorySize){
-            market = findClosestMarket(selfLocation);
-            pathToMarket = getPathToMarket(selfLocation);
-
+        }else if(canPick(currentTileLocation, itemsOnGround)){
+            action = TurnAction.PICK_UP;
+        }else if(canMine(selfTileType)){
+            action = TurnAction.MINE;
+        }else {
+             = getAvaliableAdjacentTile(adjacentPointList, otherPlayerLocation);
+            action = examineAdjacentTile(adjacentTileTypeList, otherLocation);
         }
 
 
-        return null;
+        return action;
     }
 
     /**
@@ -108,7 +125,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
      */
     @Override
     public void onReceiveItem(InventoryItem itemReceived) {
-
+        inventoryItemList.add(itemReceived);
     }
 
     /**
@@ -120,6 +137,9 @@ public class PlayerStrategy implements MinePlayerStrategy {
     @Override
     public void onSoldInventory(int totalSellPrice) {
 
+        pathToMarket.clear();
+        goingToMarket = false;
+        currentScore += totalSellPrice;
     }
 
     /**
@@ -213,5 +233,30 @@ public class PlayerStrategy implements MinePlayerStrategy {
         }
     }
 
+    public boolean canPick(Point location, Map<InventoryItem, Point> itemOnGround) {
 
+        for(Map.Entry<InventoryItem, Point> entry : itemOnGround.entrySet()){
+            if(location.equals(entry.getValue())){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean canMine(TileType tileType) {
+        return Arrays.asList(TileType.RESOURCE_DIAMOND, TileType.RESOURCE_EMERALD, TileType.RESOURCE_RUBY).contains(tileType);
+    }
+
+    public int checkOtherPlayerLocation(List<Point> adjacentPointList, Point otherPlayerLocation) {
+        for(Point point : adjacentPointList) {
+            if(point.equals(otherPlayerLocation)){
+
+            }
+        }
+    }
+
+    public TurnAction examineAdjacentTile(List<TileType> adjacentTileTypeList, Point otherPlayerLocation){
+
+
+    }
 }

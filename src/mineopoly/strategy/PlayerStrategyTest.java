@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 
 class PlayerStrategyTest {
 
-    PlayerStrategy playerStrategy;
+    private PlayerStrategy playerStrategy;
 
     @BeforeEach
     void setUp() {
@@ -34,7 +34,7 @@ class PlayerStrategyTest {
 
         Point point = new Point(3,5);
         List<Point> adjacentPointList = playerStrategy.getAdjacentPoints(point);
-        List<Point> expectPointList = new ArrayList(Arrays.asList(new Point(4,5), new Point(2,5), new Point(3,4), new Point(3,6)));
+        List<Point> expectPointList = new ArrayList<>(Arrays.asList(new Point(4,5), new Point(2,5), new Point(3,4), new Point(3,6)));
         assertEquals(expectPointList, adjacentPointList);
     }
 
@@ -91,7 +91,13 @@ class PlayerStrategyTest {
     }
 
     @Test
-    void examineAdjacentTile() {
+    void testPointsSortByDistance() {
 
+        Point start = new Point(0,0);
+        List<Point> pointList = new ArrayList<>(Arrays.asList(new Point(1,3),
+                new Point(5,1), new Point(3,2), new Point(2,3)));
+        List<Point> sorted = new ArrayList<>(Arrays.asList(new Point(1,3),
+                new Point(3,2), new Point(2,3), new Point(5,1)));
+        assertEquals(sorted, playerStrategy.pointsSortByDistance(pointList,start));
     }
 }

@@ -22,7 +22,7 @@ public class MineopolyMain {
         final GameEngine gameEngine;
 
         if(savedReplayFilePath == null) {
-            MinePlayerStrategy redStrategy =  new RandomStrategy();
+            MinePlayerStrategy redStrategy =  new PlayerStrategy();
             MinePlayerStrategy blueStrategy = new RandomStrategy();
             gameEngine = new GameEngine(DEFAULT_BOARD_SIZE, redStrategy, blueStrategy);
             gameEngine.setGuiEnabled(DEFAULT_GUI_ENABLED);

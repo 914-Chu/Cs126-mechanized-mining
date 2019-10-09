@@ -108,14 +108,20 @@ public class PlayerStrategy implements MinePlayerStrategy {
                 pathToMarket = getPathToDestination(selfLocation, closestMarket);
                 goingToMarket = true;
             }
-            action = pathToMarket.get(NEXT_MOVE_TO_MARKET);
-            pathToMarket.remove(NEXT_MOVE_TO_MARKET);
-        }else if(canPick(currentTileLocation, itemsOnGround)){
+            if(!pathToMarket.isEmpty()) {
+                action = pathToMarket.get(NEXT_MOVE_TO_MARKET);
+                pathToMarket.remove(NEXT_MOVE_TO_MARKET);
+            }
+        }else if(canPick(selfLocation, itemsOnGround)){
             action = TurnAction.PICK_UP;
         }else if(canMine(selfTileType)){
             action = TurnAction.MINE;
         }else {
-
+            int randomActionIndex = random.nextInt(allPossibleActions.size() - 1);
+            if (randomActionIndex >= allPossibleActions.indexOf(TurnAction.PICK_UP)) {
+                randomActionIndex++;
+            }
+            action = allPossibleActions.get(randomActionIndex);
         }
 
         return action;
@@ -141,7 +147,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
     @Override
     public void onSoldInventory(int totalSellPrice) {
 
-        pathToMarket.clear();
+        inventoryItemList.clear();
         goingToMarket = false;
         currentScore += totalSellPrice;
     }
@@ -238,12 +244,7 @@ public class PlayerStrategy implements MinePlayerStrategy {
 
     public boolean canPick(Point location, Map<InventoryItem, Point> itemOnGround) {
 
-        for(Map.Entry<InventoryItem, Point> entry : itemOnGround.entrySet()){
-            if(location.equals(entry.getValue())){
-                return true;
-            }
-        }
-        return false;
+        return itemOnGround.containsValue(location);
     }
 
     public boolean canMine(TileType tileType) {

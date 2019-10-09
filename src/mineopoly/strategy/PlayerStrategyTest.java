@@ -25,6 +25,11 @@ class PlayerStrategyTest {
     }
 
     @Test
+    void testGetName() {
+        assertEquals("PlayerStrategy", playerStrategy.getName());
+    }
+
+    @Test
     void testGetAdjacentTileTypes() {
 
     }

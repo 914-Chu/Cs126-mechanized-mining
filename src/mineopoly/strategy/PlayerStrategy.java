@@ -117,10 +117,8 @@ public class PlayerStrategy implements MinePlayerStrategy {
         }else if(canMine(selfTileType)){
             action = TurnAction.MINE;
         }else {
-            int randomActionIndex = random.nextInt(allPossibleActions.size() - 1);
-            if (randomActionIndex >= allPossibleActions.indexOf(TurnAction.PICK_UP)) {
-                randomActionIndex++;
-            }
+
+            int randomActionIndex = random.nextInt(allPossibleActions.size() - 2);
             action = allPossibleActions.get(randomActionIndex);
         }
 

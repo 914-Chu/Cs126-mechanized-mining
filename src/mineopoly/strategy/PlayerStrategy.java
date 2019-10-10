@@ -1,17 +1,18 @@
 package mineopoly.strategy;
 
+import javafx.scene.control.RadioMenuItem;
 import mineopoly.game.Economy;
 import mineopoly.game.TurnAction;
 import mineopoly.item.InventoryItem;
-import mineopoly.tiles.Tile;
+import mineopoly.item.ResourceType;
+import mineopoly.tiles.ResourceTile;
+
 import mineopoly.tiles.TileType;
 
 import java.awt.*;
-import java.awt.image.AffineTransformOp;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+
 
 public class PlayerStrategy implements MinePlayerStrategy {
 
@@ -21,11 +22,10 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private int winningScore;
     private int currentScore;
     private Point startTileLocation;
-    private Point currentTileLocation;
-    private Point redLowerMarketPoint;
-    private Point redUpperMarketPoint;
-    private Point blueLowerMarketPoint;
-    private Point blueUpperMarketPoint;
+    private Point currentPlayerLocation;
+    private Point otherPlayerLocation;
+    private Point lastPoint;
+    private TurnAction lastMove;
     private boolean isRedPlayer;
     private boolean goingToMarket;
     private Random random;
@@ -33,12 +33,14 @@ public class PlayerStrategy implements MinePlayerStrategy {
     private List<InventoryItem> inventoryItemList;
     private List<TurnAction> pathToMarket;
     private List<TurnAction> movementActions;
+    private List<Point> itemsOnGroundPoints;
+    private List<Point> adjacentPointList;
+    private List<TileType> adjacentTileTypeList;
+    private Map<TurnAction, TileType> actionAtTiles = new HashMap<>();
+    private Map<InventoryItem, Point> itemsOnGround;
+    private Map<Point, TurnAction> actionAtPoint = new HashMap<>();
     private final int ADJACENT_TILES_AMOUNT = 4;
     private final int NEXT_MOVE_TO_MARKET = 0;
-    private final int UP_TILE = 0;
-    private final int DOWN_TILE = 1;
-    private final int LEFT_TILE = 2;
-    private final int RIGHT_TILE = 3;
 
     /**
      * Called at the start of every round
@@ -60,18 +62,14 @@ public class PlayerStrategy implements MinePlayerStrategy {
         this.startTileLocation = startTileLocation;
         this.isRedPlayer = isRedPlayer;
         this.random = random;
-        this.allPossibleActions = new ArrayList<>(EnumSet.allOf(TurnAction.class));
-        allPossibleActions.add(null);
-        currentTileLocation = startTileLocation;
+        halfBoardSize = boardSize / 2;
+        currentPlayerLocation = startTileLocation;
+        actionAtPoint = new HashMap<>();
         inventoryItemList = new ArrayList<>(maxInventorySize);
         movementActions = new ArrayList<>(Arrays.asList(TurnAction.MOVE_UP, TurnAction.MOVE_DOWN, TurnAction.MOVE_LEFT, TurnAction.MOVE_RIGHT));
+
         goingToMarket = false;
         currentScore = 0;
-        halfBoardSize = boardSize / 2;
-        redLowerMarketPoint = new Point(halfBoardSize - 1, halfBoardSize - 1);
-        redUpperMarketPoint = new Point(halfBoardSize, halfBoardSize);
-        blueLowerMarketPoint = new Point(halfBoardSize, halfBoardSize - 1);
-        blueUpperMarketPoint = new Point(halfBoardSize - 1, halfBoardSize);
     }
 
     /**
@@ -88,40 +86,54 @@ public class PlayerStrategy implements MinePlayerStrategy {
     @Override
     public TurnAction getTurnAction(PlayerBoardView boardView, Economy economy, boolean isRedTurn) {
 
-        Point selfLocation = boardView.getYourLocation();
-        Point otherPlayerLocation = boardView.getOtherPlayerLocation();
-        List<Point> adjacentPointList = getAdjacentPoints(selfLocation);
-        List<TileType> adjacentTileTypeList = getAdjacentTileTypes(boardView, selfLocation);
-        TileType selfTileType = boardView.getTileTypeAtLocation(selfLocation);
-        Point unavailableAdjacentTilePoint = getUnavailableAdjacentTile(adjacentPointList, otherPlayerLocation);
+        currentPlayerLocation = boardView.getYourLocation();
+        otherPlayerLocation = boardView.getOtherPlayerLocation();
+        adjacentPointList = Utility.getAdjacentPoints(currentPlayerLocation);
+        adjacentTileTypeList = Utility.getAdjacentTileTypes(boardView, currentPlayerLocation);
+        TileType selfTileType = boardView.getTileTypeAtLocation(currentPlayerLocation);
+        Point unavailableAdjacentTilePoint = Utility.getUnavailableAdjacentTile(adjacentPointList, otherPlayerLocation);
+        Point toGo = null;
         TurnAction action = null;
-        Map<InventoryItem, Point> itemsOnGround = boardView.getItemsOnGround();
-        Map<Point, TurnAction> actionAtPoint = new HashMap<>();
-        actionAtPoint.put(adjacentPointList.get(UP_TILE), movementActions.get(UP_TILE));
-        actionAtPoint.put(adjacentPointList.get(DOWN_TILE), movementActions.get(DOWN_TILE));
-        actionAtPoint.put(adjacentPointList.get(LEFT_TILE), movementActions.get(LEFT_TILE));
-        actionAtPoint.put(adjacentPointList.get(RIGHT_TILE), movementActions.get(RIGHT_TILE));
+        itemsOnGround = boardView.getItemsOnGround();
+        itemsOnGroundPoints = new ArrayList<>(itemsOnGround.values());
+
+        for(int i = 0; i < ADJACENT_TILES_AMOUNT; i++) {
+            actionAtPoint.put(adjacentPointList.get(i), movementActions.get(i));
+            actionAtTiles.put(movementActions.get(i), adjacentTileTypeList.get(i));
+        }
+
 
         if(inventoryItemList.size() == maxInventorySize){
             if(!goingToMarket){
-                Point closestMarket = findClosestMarket(selfLocation);
-                pathToMarket = getPathToDestination(selfLocation, closestMarket);
+                Point closestMarket = Utility.findClosestMarket(currentPlayerLocation, isRedPlayer, halfBoardSize);
+                pathToMarket = Utility.getPathToDestination(currentPlayerLocation, closestMarket);
                 goingToMarket = true;
             }
             if(!pathToMarket.isEmpty()) {
                 action = pathToMarket.get(NEXT_MOVE_TO_MARKET);
                 pathToMarket.remove(NEXT_MOVE_TO_MARKET);
             }
-        }else if(canPick(selfLocation, itemsOnGround)){
+        }else if(Utility.canPick(currentPlayerLocation, itemsOnGround)){
             action = TurnAction.PICK_UP;
-        }else if(canMine(selfTileType)){
+        }else if(Utility.canMine(selfTileType)){
             action = TurnAction.MINE;
-        }else {
-
-            int randomActionIndex = random.nextInt(allPossibleActions.size() - 2);
+//        }else if(hasAdjacentItem(adjacentPointList, itemsOnGroundPoints)) {
+//            action = moveToItem(actionAtPoint, itemsOnGroundPoints);
+//        }else if(hasAdjacentResource(adjacentTileTypeList)){
+//            action = moveToResource(actionAtTiles);
+        } else {
+            int randomActionIndex = random.nextInt(movementActions.size());
             action = allPossibleActions.get(randomActionIndex);
         }
 
+        for(Point point : actionAtPoint.keySet()){
+            assert toGo != null;
+            if(toGo.equals(point)){
+                action = actionAtPoint.get(point);
+            }
+        }
+
+        endTurn(action, currentPlayerLocation);
         return action;
     }
 
@@ -173,108 +185,12 @@ public class PlayerStrategy implements MinePlayerStrategy {
 
     }
 
-    public List<TileType> getAdjacentTileTypes(PlayerBoardView boardView, Point point) {
+    private void endTurn(TurnAction action, Point point){
 
-        List<TileType> adjacentTilesTypeList = new ArrayList<>(ADJACENT_TILES_AMOUNT);
-        List<Point> adjacentPointList = getAdjacentPoints(point);
-
-        for(int i = 0; i < ADJACENT_TILES_AMOUNT; i++) {
-            adjacentTilesTypeList.add(boardView.getTileTypeAtLocation(adjacentPointList.get(i)));
-        }
-
-        return adjacentTilesTypeList;
-    }
-
-    public List<Point> getAdjacentPoints(Point point) {
-
-        List<Point> adjacentPointList = new ArrayList<>(ADJACENT_TILES_AMOUNT);
-        adjacentPointList.add(new Point(point.x + 1, point.y)); //UP
-        adjacentPointList.add(new Point(point.x - 1, point.y)); //DOWN
-        adjacentPointList.add(new Point(point.x,point.y - 1));  //LEFT
-        adjacentPointList.add(new Point(point.x, point.y + 1)); //RIGHT
-
-        return adjacentPointList;
-    }
-
-    public List<TurnAction> getPathToDestination(Point start, Point destination) {
-
-        List<TurnAction> pathToDestination = new ArrayList<>();
-        int horizontalMove = destination.x - start.x;
-        int verticalMove = destination.y - start.y;
-        if(horizontalMove < 0) {
-            for(int i = 0; i < Math.abs(horizontalMove); i++) {
-                pathToDestination.add(TurnAction.MOVE_LEFT);
-            }
-        }else {
-            for(int i = 0; i < Math.abs(horizontalMove); i++) {
-                pathToDestination.add(TurnAction.MOVE_RIGHT);
-            }
-        }
-
-        if(verticalMove < 0) {
-            for(int i = 0; i < Math.abs(verticalMove); i++) {
-                pathToDestination.add(TurnAction.MOVE_DOWN);
-            }
-        }else {
-            for(int i = 0; i < Math.abs(verticalMove); i++) {
-                pathToDestination.add(TurnAction.MOVE_UP);
-            }
-        }
-        return pathToDestination;
-    }
-
-    public Point findClosestMarket(Point point) {
-
-        if(isRedPlayer) {
-            if(point.x < redUpperMarketPoint.x && point.y < redUpperMarketPoint.y){
-                return redLowerMarketPoint;
-            }else {
-                return redUpperMarketPoint;
-            }
-        }else {
-            if(point.x <= blueUpperMarketPoint.x && point.y >= blueUpperMarketPoint.y){
-                return blueUpperMarketPoint;
-            }else {
-                return blueLowerMarketPoint;
-            }
-        }
-    }
-
-    public boolean canPick(Point location, Map<InventoryItem, Point> itemOnGround) {
-
-        return itemOnGround.containsValue(location);
-    }
-
-    public boolean canMine(TileType tileType) {
-        return Arrays.asList(TileType.RESOURCE_DIAMOND, TileType.RESOURCE_EMERALD, TileType.RESOURCE_RUBY).contains(tileType);
-    }
-
-    public Point getUnavailableAdjacentTile (List<Point> adjacentPointList, Point otherPlayerLocation) {
-
-        if(adjacentPointList.contains(otherPlayerLocation)){
-            return otherPlayerLocation;
-        }
-        return null;
-    }
-
-    public List<Point> pointsSortByDistance(List<Point> pointList, Point start) {
-
-        Map<Integer, List<Point>> distanceOfPoint = new TreeMap<>();
-        List<Point> sortedPointList = new ArrayList<>();
-
-        for(Point destination : pointList){
-            int length = getPathToDestination(start, destination).size();
-            if(distanceOfPoint.containsKey(length)){
-                distanceOfPoint.get(length).add(destination);
-            }else {
-                distanceOfPoint.put(length, new ArrayList<>(Arrays.asList(destination)));
-            }
-        }
-
-        for(Map.Entry<Integer, List<Point>> entry : distanceOfPoint.entrySet()){
-            sortedPointList.addAll(entry.getValue());
-        }
-        return sortedPointList;
+        actionAtPoint.clear();
+        actionAtTiles.clear();
+        lastMove = action;
+        lastPoint = point;
     }
 
 }

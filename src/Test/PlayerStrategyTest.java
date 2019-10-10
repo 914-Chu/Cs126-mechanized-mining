@@ -1,8 +1,9 @@
-package mineopoly.strategy;
+package Test;
 
 import mineopoly.game.TurnAction;
 import mineopoly.item.InventoryItem;
 import mineopoly.item.ResourceType;
+import mineopoly.strategy.PlayerStrategy;
 import mineopoly.tiles.Tile;
 import mineopoly.tiles.TileType;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,11 +28,6 @@ class PlayerStrategyTest {
     @Test
     void testGetName() {
         assertEquals("PlayerStrategy", playerStrategy.getName());
-    }
-
-    @Test
-    void testGetAdjacentTileTypes() {
-
     }
 
     @Test
@@ -104,5 +100,43 @@ class PlayerStrategyTest {
         List<Point> sorted = new ArrayList<>(Arrays.asList(new Point(1,3),
                 new Point(3,2), new Point(2,3), new Point(5,1)));
         assertEquals(sorted, playerStrategy.pointsSortByDistance(pointList,start));
+    }
+
+    @Test
+    void testHasAdjacentItem() {
+
+        List<Point> listWithItemOnGround = new ArrayList<>(Arrays.asList(new Point(1,3),
+                new Point(5,1), new Point(3,2)));
+        List<Point> listWithoutItemOnGround = new ArrayList<>(Arrays.asList(new Point(1,3),
+                new Point(6,1), new Point(3,2)));
+        List<Point> itemsOnGroundPoints = new ArrayList<>(Arrays.asList(new Point(5,1)));
+        assertTrue(playerStrategy.hasAdjacentItem(listWithItemOnGround,itemsOnGroundPoints));
+        assertFalse(playerStrategy.hasAdjacentItem(listWithoutItemOnGround, itemsOnGroundPoints));
+    }
+
+    @Test
+    void testMoveToItem() {
+        Map<Point, TurnAction> actionAtPoint = new HashMap<>();
+        actionAtPoint.put(new Point(5,3), TurnAction.MOVE_UP);
+        actionAtPoint.put(new Point(5,1), TurnAction.MOVE_DOWN);
+        List<Point> itemsOnGroundPoints = new ArrayList<>(Arrays.asList(new Point(5,3)));
+        assertEquals(TurnAction.MOVE_UP, playerStrategy.moveToItem(actionAtPoint,itemsOnGroundPoints));
+    }
+
+    @Test
+    void testHasAdjacentResource() {
+        List<TileType> hasResource = new ArrayList<>(Arrays.asList(TileType.RESOURCE_EMERALD, TileType.EMPTY));
+        List<TileType> noResource = new ArrayList<>(Arrays.asList(TileType.MARKET, TileType.EMPTY));
+        assertTrue(playerStrategy.hasAdjacentResource(hasResource));
+        assertFalse(playerStrategy.hasAdjacentResource(noResource));
+    }
+
+    @Test
+    void testMoveToResource() {
+        Map<TurnAction,TileType> actionAtTile = new HashMap<>();
+        actionAtTile.put(TurnAction.MOVE_UP, TileType.RESOURCE_RUBY);
+        actionAtTile.put(TurnAction.MOVE_RIGHT, TileType.MARKET);
+
+        assertEquals(TurnAction.MOVE_UP, playerStrategy.moveToResource(actionAtTile));
     }
 }
